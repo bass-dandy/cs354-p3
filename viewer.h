@@ -65,8 +65,8 @@ class ModelViewer {
 
         // Display variables
         bool isCameraCoordinates = false;
-        bool doFaceNormals        = false;
-        bool doVertexNormals      = false;
+        bool isFaceNormals       = false;
+        bool isVertexNormals     = false;
         int mode = MODE_LIT;
         int w;
         int h;
@@ -90,11 +90,11 @@ class ModelViewer {
                 gluPerspective(45.0, w/h, zNear, zFar);
 
                 camera.update();
-                    
-                models.top().draw(mode, doVertexNormals, doFaceNormals);
+                models.top().draw(mode, isVertexNormals, isFaceNormals);
             }
             glFlush();
         }
+
 
         void loadModel(std::string filename) {
             Trimesh *tm = new Trimesh();
@@ -105,6 +105,7 @@ class ModelViewer {
             camera.lookAt(tm->getOrigin());
             camera.dist = 0.01f + tm->getMaxDelta() * 1.5f;
         }
+
 
         void translate(float x, float y, float z) {
             if(isCameraCoordinates) {
@@ -126,6 +127,7 @@ class ModelViewer {
             models.top().translate(x, y, z);
         }
 
+
         void scale(float x, float y, float z) {
             if(isCameraCoordinates) {
                 GLfloat view[16];
@@ -146,7 +148,11 @@ class ModelViewer {
             models.top().scale(x, y, z);
         }
 
+
         void rotate(float t, float x, float y, float z) {
+            if(isCameraCoordinates) {
+                // TODO: convert to camera coords
+            }
             models.top().rotate(t, x, y, z);
         }
 
@@ -155,7 +161,9 @@ class ModelViewer {
         }
 
         void loadIdentity() {
-            models.top().identity();
+            if(!models.empty()) {
+                models.top().identity();
+            }
         }
 
         void setViewport(int w, int h) {
@@ -163,23 +171,25 @@ class ModelViewer {
             this->h = h;
         }
 
-        void setMode(int mode) {
-            this->mode = mode;
-        }
-
         void useCameraCoordinates(bool isCameraCoordinates) {
             this->isCameraCoordinates = isCameraCoordinates;
         }
 
-        void orbit(float x, float y) {
-            this->camera.orbit(x, y);
+        bool toggleFaceNormals() {
+            isFaceNormals = !isFaceNormals;
+            return isFaceNormals;
         }
 
-        void zoom(float delta) {
-            this->camera.zoom(delta);
+        bool toggleVertexNormals() {
+            isVertexNormals = !isVertexNormals;
+            return isVertexNormals;
         }
 
-        void pan(float x, float y) {
-            this->camera.pan(x, y);
-        }
+        void setMode(int mode) { this->mode = mode; }
+
+        void orbit(float x, float y) { this->camera.orbit(x, y); }
+
+        void zoom(float delta) { this->camera.zoom(delta); }
+
+        void pan(float x, float y) { this->camera.pan(x, y); }
 };

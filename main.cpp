@@ -100,18 +100,32 @@ void parseCommands(std::istream &is) {
             std::cout << "Using world coordinates..." << std::endl;
             viewer->useCameraCoordinates(false);
         } 
-        else if(tok == "wire") {
-            viewer->setMode(MODE_WIRE);
-        } 
-        else if(tok == "solid") {
-            viewer->setMode(MODE_SOLID);  
-        } 
-        else if(tok == "lit") {
-            viewer->setMode(MODE_LIT);   
-        } 
-        else if(tok == "point") {
-            viewer->setMode(MODE_POINT);
-        } 
+        else if(tok == "N") {
+            std::string arg(strtok(NULL, " "));
+            if(arg == "face") {
+                bool show = viewer->toggleFaceNormals();
+                std::cout << "Show face normals: " << (show ? "ON" : "OFF") << std::endl;
+            }
+            else if(arg == "vertex") {
+                bool show = viewer->toggleVertexNormals();
+                std::cout << "Show vertex normals: " << (show ? "ON" : "OFF") << std::endl;
+            }
+        }
+        else if(tok == "M") {
+            std::string arg(strtok(NULL, " "));
+            if(arg == "wire") {
+                viewer->setMode(MODE_WIRE);
+            } 
+            else if(arg == "solid") {
+                viewer->setMode(MODE_SOLID);  
+            } 
+            else if(arg == "lit") {
+                viewer->setMode(MODE_LIT);   
+            } 
+            else if(arg == "point") {
+                viewer->setMode(MODE_POINT);
+            } 
+        }
         else {
             std::cout << "Command " << tok << " is not valid." << std::endl;
         }
