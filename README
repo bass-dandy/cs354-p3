@@ -1,0 +1,16 @@
+In addition to the commands listed on the project spec, two additional 
+commands have been added:
+
+M <arg>
+    changes the viewing mode
+    arg can be any of: point wire solid lit
+
+N <arg>
+    toggles normal visibility for arg-type normals
+    arg can be either of: face vertex
+
+To input commands, focus on the glut window and press the 'c' key
+Commands can then be entered into the terminal used to launch the program
+
+Note that the orbit camera suffers from gimble lock, so moving it to extreme 
+y values will result in buggy behavior.
