@@ -130,37 +130,32 @@ class Trimesh {
     private:
 
         struct Face {
-            std::vector<Point> normals;
-            std::vector<Point> verts;
+            int ids[3];
+            Point normal;
 
-            Face(const int *ids, int count, std::vector<Point> &verts) {
-                for(int i = 0; i < count; ++i) {
-                    this->verts.push_back(verts[ids[i] - 1]);
+            Face(const int *ids, const std::vector<Point> &verts) {
+                for(int i = 0; i < 3; ++i) {
+                    this->ids[i] = ids[i];
                 }
-                computeNormals();    
+                computeNormal(verts);    
             }
 
             private:
 
-                void computeNormals() {
-                    Point pivot = verts[0];
-                    Point prev  = verts[1];
+                void computeNormal(const std::vector<Point> &verts) {
+                    Point a = verts[ids[0]];
+                    Point b = verts[ids[1]];
+                    Point c = verts[ids[2]];
+                    
+                    Point u(b.x - a.x, b.y - a.y, b.z - a.z);
+                    Point v(c.x - a.x, c.y - a.y, c.z - a.z);
 
-                    for(int i = 2; i < verts.size(); ++i) {
-                        Point curr = verts[i];
-                        
-                        Point u(prev.x - pivot.x, prev.y - pivot.y, prev.z - pivot.z);
-                        Point v(curr.x - pivot.x, curr.y - pivot.y, curr.z - pivot.z);
+                    // Compute cross product
+                    float nx = u.y * v.z - u.z * v.y;
+                    float ny = u.z * v.x - u.x * v.z;
+                    float nz = u.x * v.y - u.y * v.x;
 
-                        // Compute cross product
-                        float nx = u.y * v.z - u.z * v.y;
-                        float ny = u.z * v.x - u.x * v.z;
-                        float nz = u.x * v.y - u.y * v.x;
-
-                        Point n(nx, ny, nz);
-                        normals.push_back(n);
-                        prev = curr;
-                    }
+                    normal = Point(nx, ny, nz).normalize();
                 }
         };
 
@@ -196,15 +191,11 @@ class Trimesh {
             for(int i = 0; i < faces.size(); ++i) {
                 Face f = faces[i];
             
-                glBegin(GL_TRIANGLE_FAN);
-                for(int j = 0; j < f.verts.size(); ++j) { 
-                    if(j > 2) {
-                        glNormal3f(f.normals[j - 2].x, f.normals[j - 2].y, f.normals[j - 2].z);
-                    }
-                    else if(j == 0) {
-                        glNormal3f(f.normals[0].x, f.normals[0].y, f.normals[0].z);
-                    }
-                    Point p = rotation * ((f.verts[j] + translation) * scaling);
+                glBegin(GL_TRIANGLES);
+                glNormal3f(f.normal.x, f.normal.y, f.normal.z);
+                
+                for(int j = 0; j < 3; ++j) { 
+                    Point p = rotation * ((vertices[f.ids[j]] + translation) * scaling);
                     glVertex3f(p.x, p.y, p.z);
                 }
                 glEnd();
@@ -215,8 +206,8 @@ class Trimesh {
 
         Trimesh() : scaling(Point(1.0f, 1.0f, 1.0f)), rotation(MatrixR3::identity()) {}
 
-        void addFace(const int *ids, int count) {
-            Face f(ids, count, vertices);
+        void addFace(const int *ids) {
+            Face f(ids, vertices);
             faces.push_back(f);
         }
 

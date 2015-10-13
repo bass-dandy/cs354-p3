@@ -98,9 +98,16 @@ class TrimeshLoader
 		{
 			int ids[256]; 
 			int cnt = readInts(tok, ids, 256);
-			if(cnt >= 3)
-			    pmsh->addFace(ids, cnt);
-
+			if(cnt >= 3) {
+				int tri[3] = { ids[0] - 1, ids[1] - 1, ids[2] - 1 };
+			    pmsh->addFace(tri);
+				for(int i = 3; i < cnt; ++i)
+				{
+					tri[1] = tri[2];
+					tri[2] = ids[i] - 1;
+					pmsh->addFace(tri);
+				}
+            }
 			return true;
 		}
 };
