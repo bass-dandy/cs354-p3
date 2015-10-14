@@ -143,7 +143,7 @@ class Trimesh {
             int ids[3];
             Point normal;
 
-            Face(const int *ids, const std::vector<Point> &verts) {
+            Face(const int *ids, std::vector<Point> &verts) {
                 for(int i = 0; i < 3; ++i) {
                     this->ids[i] = ids[i];
                 }
@@ -152,7 +152,7 @@ class Trimesh {
 
             private:
 
-                void computeNormal(const std::vector<Point> &verts) {
+                void computeNormal(std::vector<Point> &verts) {
                     Point a = verts[ids[0]];
                     Point b = verts[ids[1]];
                     Point c = verts[ids[2]];
@@ -166,6 +166,12 @@ class Trimesh {
                     float nz = u.x * v.y - u.y * v.x;
 
                     normal = Point(nx, ny, nz).normalize();
+
+                    // Add normal to each vertex on face
+                    for(int i = 0; i < 3; ++i) {
+                        *(verts[ids[i]].normal) += normal;
+                        verts[ids[i]].fCount++;
+                    }
                 }
         };
 
@@ -199,7 +205,17 @@ class Trimesh {
 
         void drawNormals(bool isVertexNormals, bool isFaceNormals) {
             if(isVertexNormals) {
+                glColor3f(0.0f, 1.0f, 1.0f);
+                
+                for(int i = 0; i < verts.size(); ++i) {
+                    Point p = verts[i];
+                    Point n = p.normal->normalize();
 
+                    glBegin(GL_LINES);
+                    glVertex3f(p.x, p.y, p.z);
+                    glVertex3f(p.x + n.x, p.y + n.y, p.z + n.z);
+                    glEnd();
+                }
             }
             if(isFaceNormals) {
                 glColor3f(1.0f, 0.0f, 1.0f);
@@ -226,10 +242,10 @@ class Trimesh {
                 Face f = faces[i];
             
                 glBegin(GL_TRIANGLES);
-                glNormal3f(f.normal.x, f.normal.y, f.normal.z);
-                
                 for(int j = 0; j < 3; ++j) { 
                     Point p = rotation * ((verts[f.ids[j]] + translation) * scaling);
+                    Point n = verts[f.ids[j]].normal->normalize();
+                    glNormal3f(n.x, n.y, n.z);
                     glVertex3f(p.x, p.y, p.z);
                 }
                 glEnd();
@@ -251,6 +267,7 @@ class Trimesh {
             float z = values[2];
 
             Point p(x, y, z);
+            p.normal = new Point(0.0f, 0.0f, 0.0f);
             verts.push_back(p);
 
             if(x < minX)
