@@ -19,7 +19,10 @@ struct Point {
     float y;
     float z;
 
-    Point(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
+    Point *normal;
+    int fCount;
+
+    Point(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z), fCount(0) {}
 
     Point &operator+=(const Point &other) {
         this->x += other.x;
@@ -39,6 +42,13 @@ struct Point {
         this->x *= scale;
         this->y *= scale;
         this->z *= scale;
+        return *this;
+    }
+
+    Point &operator/=(float scale) {
+        this->x /= scale;
+        this->y /= scale;
+        this->z /= scale;
         return *this;
     }
 
@@ -159,7 +169,7 @@ class Trimesh {
                 }
         };
 
-        std::vector<Point> vertices;
+        std::vector<Point> verts;
         std::vector<Face>  faces;
         
         // For computing initial viewing matrix
@@ -180,11 +190,35 @@ class Trimesh {
         void drawVerts() {
             glPointSize(3.0);
             glBegin(GL_POINTS);
-            for(int i = 0; i < vertices.size(); ++i) {
-                Point p = rotation * ((vertices[i] + translation) * scaling);
+            for(int i = 0; i < verts.size(); ++i) {
+                Point p = rotation * ((verts[i] + translation) * scaling);
                 glVertex3f(p.x, p.y, p.z);
             }
             glEnd();
+        }
+
+        void drawNormals(bool isVertexNormals, bool isFaceNormals) {
+            if(isVertexNormals) {
+
+            }
+            if(isFaceNormals) {
+                glColor3f(1.0f, 0.0f, 1.0f);
+                
+                for(int i = 0; i < faces.size(); ++i) {
+                    Face f = faces[i];
+                    Point p(0.0f, 0.0f, 0.0f);
+                    
+                    p += verts[f.ids[0]];
+                    p += verts[f.ids[1]];
+                    p += verts[f.ids[2]];
+                    p /= 3.0f;
+
+                    glBegin(GL_LINES);
+                    glVertex3f(p.x, p.y, p.z);
+                    glVertex3f(f.normal.x + p.x, f.normal.y + p.y, f.normal.z + p.z);
+                    glEnd();
+                }
+            }
         }
 
         void draw() {
@@ -195,7 +229,7 @@ class Trimesh {
                 glNormal3f(f.normal.x, f.normal.y, f.normal.z);
                 
                 for(int j = 0; j < 3; ++j) { 
-                    Point p = rotation * ((vertices[f.ids[j]] + translation) * scaling);
+                    Point p = rotation * ((verts[f.ids[j]] + translation) * scaling);
                     glVertex3f(p.x, p.y, p.z);
                 }
                 glEnd();
@@ -207,7 +241,7 @@ class Trimesh {
         Trimesh() : scaling(Point(1.0f, 1.0f, 1.0f)), rotation(MatrixR3::identity()) {}
 
         void addFace(const int *ids) {
-            Face f(ids, vertices);
+            Face f(ids, verts);
             faces.push_back(f);
         }
 
@@ -217,7 +251,7 @@ class Trimesh {
             float z = values[2];
 
             Point p(x, y, z);
-            vertices.push_back(p);
+            verts.push_back(p);
 
             if(x < minX)
                 minX = x;
@@ -276,7 +310,7 @@ class Trimesh {
             this->rotation    = MatrixR3::identity();
         }
 
-        void draw(int mode, bool doVNormals, bool doSNormals) {
+        void draw(int mode, bool isVertexNormals, bool isFaceNormals) {
             switch(mode) {
                 case MODE_POINT:
                     glColor3f(1.0f, 0.0f, 0.0f);
@@ -303,6 +337,7 @@ class Trimesh {
                     glDisable(GL_LIGHTING);
                     break;
             }
+            drawNormals(isVertexNormals, isFaceNormals);
         }
 };
 
