@@ -97,67 +97,75 @@ class ModelViewer {
 
 
         void loadModel(std::string filename) {
-            Trimesh *tm = new Trimesh();
+            Trimesh tm;
             TrimeshLoader ldr;
-            ldr.loadOBJ(filename.c_str(), tm);
-            models.push(*tm);
+            ldr.loadOBJ(filename.c_str(), &tm);
+            models.push(tm);
 
-            camera.lookAt(tm->getOrigin());
-            camera.dist = 0.01f + tm->getMaxDelta() * 1.5f;
+            camera.lookAt(tm.getOrigin());
+            camera.dist = 0.01f + tm.getMaxDelta() * 1.5f;
         }
 
 
         void translate(float x, float y, float z) {
-            if(isCameraCoordinates) {
-                GLfloat view[16];
-                glGetFloatv(GL_MODELVIEW_MATRIX, view);
-                
-                Point right(view[0], view[4], view[8]);
-                Point    up(view[1], view[5], view[9]);
-                Point  back(view[2], view[6], view[10]);
-                
-                right = right.normalize() * x;
-                up    = up.normalize()    * y;
-                back  = back.normalize()  * z;
+            if(!models.empty()) {
+                if(isCameraCoordinates) {
+                    GLfloat view[16];
+                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
+                    
+                    Point right(view[0], view[4], view[8]);
+                    Point    up(view[1], view[5], view[9]);
+                    Point  back(view[2], view[6], view[10]);
+                    
+                    right = right.normalize() * x;
+                    up    = up.normalize()    * y;
+                    back  = back.normalize()  * z;
 
-                x = right.x + up.x + back.x;
-                y = right.y + up.y + back.y;
-                z = right.z + up.z + back.z;
+                    x = right.x + up.x + back.x;
+                    y = right.y + up.y + back.y;
+                    z = right.z + up.z + back.z;
+                }
+                models.top().translate(x, y, z);
             }
-            models.top().translate(x, y, z);
         }
 
 
         void scale(float x, float y, float z) {
-            if(isCameraCoordinates) {
-                GLfloat view[16];
-                glGetFloatv(GL_MODELVIEW_MATRIX, view);
-                
-                Point right(view[0], view[4], view[8]);
-                Point    up(view[1], view[5], view[9]);
-                Point  back(view[2], view[6], view[10]);
-                
-                right = right.normalize() * x;
-                up    = up.normalize()    * y;
-                back  = back.normalize()  * z;
+            if(!models.empty()) {
+                if(isCameraCoordinates) {
+                    GLfloat view[16];
+                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
+                    
+                    Point right(view[0], view[4], view[8]);
+                    Point    up(view[1], view[5], view[9]);
+                    Point  back(view[2], view[6], view[10]);
+                    
+                    right = right.normalize() * x;
+                    up    = up.normalize()    * y;
+                    back  = back.normalize()  * z;
 
-                x = right.x + up.x + back.x;
-                y = right.y + up.y + back.y;
-                z = right.z + up.z + back.z;
+                    x = right.x + up.x + back.x;
+                    y = right.y + up.y + back.y;
+                    z = right.z + up.z + back.z;
+                }
+                models.top().scale(x, y, z);
             }
-            models.top().scale(x, y, z);
         }
 
 
         void rotate(float t, float x, float y, float z) {
-            if(isCameraCoordinates) {
-                // TODO: convert to camera coords
+            if(!models.empty()) {
+                if(isCameraCoordinates) {
+                    // TODO: convert to camera coords
+                }
+                models.top().rotate(t, x, y, z);
             }
-            models.top().rotate(t, x, y, z);
         }
 
         void deleteModel() {
-            models.pop();
+            if(!models.empty()) {
+                models.pop();
+            }
         }
 
         void loadIdentity() {

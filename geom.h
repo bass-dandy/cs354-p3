@@ -14,15 +14,15 @@ enum {
     MODE_LIT
 };
 
+// A point in 3-space, includes a normal if it is a trimesh vertex
 struct Point {
     float x;
     float y;
     float z;
 
     Point *normal;
-    int fCount;
 
-    Point(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z), fCount(0) {}
+    Point(float x = 0.0f, float y = 0.0f, float z = 0.0f) : x(x), y(y), z(z) {}
 
     Point &operator+=(const Point &other) {
         this->x += other.x;
@@ -70,6 +70,7 @@ struct Point {
     }
 };
 
+// A 3x3, column-major matrix
 struct MatrixR3 {
 
     float mat[9];
@@ -170,7 +171,6 @@ class Trimesh {
                     // Add normal to each vertex on face
                     for(int i = 0; i < 3; ++i) {
                         *(verts[ids[i]].normal) += normal;
-                        verts[ids[i]].fCount++;
                     }
                 }
         };
@@ -224,6 +224,7 @@ class Trimesh {
                     Face f = faces[i];
                     Point p(0.0f, 0.0f, 0.0f);
                     
+                    // Compute center of face
                     p += verts[f.ids[0]];
                     p += verts[f.ids[1]];
                     p += verts[f.ids[2]];
@@ -270,6 +271,7 @@ class Trimesh {
             p.normal = new Point(0.0f, 0.0f, 0.0f);
             verts.push_back(p);
 
+            // Update the model's origin
             if(x < minX)
                 minX = x;
             else if(x > maxX)
@@ -313,6 +315,7 @@ class Trimesh {
             MatrixR3 i = MatrixR3::identity();
             MatrixR3 w;
 
+            // Compute rotation matrix and apply it to current rotation
             w[0] = 0.0f;    w[3] = -axis.z; w[6] = axis.y;
             w[1] = axis.z;  w[4] = 0.0f;    w[7] = -axis.x;
             w[2] = -axis.y; w[5] = axis.x;  w[8] = 0.0f;
@@ -322,6 +325,7 @@ class Trimesh {
         }
 
         void identity() {
+            // Reset all transformations
             this->translation = Point();
             this->scaling     = Point(1.0f, 1.0f, 1.0f);
             this->rotation    = MatrixR3::identity();

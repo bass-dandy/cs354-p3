@@ -52,9 +52,7 @@ void MouseMotion(int x, int y) {
 }
 
 
-void parseCommands(std::istream &is) {
-    char ln[256];
-    is.getline(ln, 256);
+void parseCommand(char *ln) {
     char *ctok = strtok(ln, " ");
 
     if(ctok) {
@@ -137,7 +135,9 @@ void parseCommands(std::istream &is) {
 void keyboard(unsigned char key, int x, int y) {
     if(key == 'c') {
         std::cout << "Enter command: ";
-        parseCommands(std::cin);
+        char ln[256];
+        std::cin.getline(ln, 256);
+        parseCommand(ln);
     }
 }
 
@@ -165,9 +165,25 @@ int main(int argc, char *argv[]) {
 
     viewer = new ModelViewer();
 
-    // TODO delete
-    viewer->loadModel(std::string("models/cessna.obj"));
+    // Load initialization file
+    if(argc == 3) {
+        using namespace std;
+        string flag(argv[1]);
+        string arg(argv[2]);
 
+        if(flag == "-f") {
+            cout << "Running commands from file " << arg << "..." << endl;
+            ifstream ifs(arg);
+
+            while(ifs) {
+                char ln[256];
+                ifs.getline(ln, 256);
+                parseCommand(ln);
+            }
+        }
+
+    }
     glutMainLoop();
+    delete viewer;
     return 0;
 }
