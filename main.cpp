@@ -60,6 +60,11 @@ void parseCommand(char *ln) {
 
         if(tok == "L") {
             std::string arg(strtok(NULL, " "));
+            if(arg.length() >= 4) {
+                if(arg.compare(arg.length() - 4, 4, ".obj")) {
+                    arg += ".obj";
+                }
+            }
             std::cout << "Loading file " << arg << "..." << std::endl;
             viewer->loadModel(arg);
         } 

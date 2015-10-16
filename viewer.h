@@ -61,6 +61,10 @@ class ModelViewer {
                 void lookAt(Point p) {
                     look = p;
                 }
+
+                const Point &getPos() {
+                    return this->pos;
+                }
         };
 
         // Display variables
@@ -156,7 +160,20 @@ class ModelViewer {
         void rotate(float t, float x, float y, float z) {
             if(!models.empty()) {
                 if(isCameraCoordinates) {
-                    // TODO: convert to camera coords
+                    GLfloat view[16];
+                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
+                    
+                    Point right = Point(view[0], view[4], view[8]).normalize();
+                    Point    up = Point(view[1], view[5], view[9]).normalize();
+                    Point  back = Point(view[2], view[6], view[10]).normalize();
+                    
+                    Point camX = right * x;
+                    Point camY = up    * y;
+                    Point camZ = back  * z;
+                    
+                    x = camX.x + camY.x + camZ.x;
+                    y = camX.y + camY.y + camZ.y;
+                    z = camX.z + camY.z + camZ.z;
                 }
                 models.top().rotate(t, x, y, z);
             }
