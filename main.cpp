@@ -4,6 +4,7 @@
 #include <string>
 
 #include "viewer.h"
+#include "src/include/GL/glui.h"
 
 // Mouse control
 GLfloat clickCoords[2];
@@ -14,14 +15,26 @@ bool isMiddleClick = false;
 // Model viewer
 ModelViewer *viewer;
 
+// GLUI components
+int main_window;
+GLUI *glui, *glui2;
+
+// GLUI live variables
+char filename[128];
+int renderMode = MODE_LIT;
+int showFaceNormals = 0;
+int showVertNormals = 0;
+Point translation;
+Point scaling;
+float rotation[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
 void reshape(int w, int h) {
     viewer->setViewport(w, h);
-    glutPostRedisplay();
+    GLUI_Master.auto_set_viewport();
 }
 
 
-void MouseButton(int button, int state, int x, int y) {
+void mouseButton(int button, int state, int x, int y) {
     if(state == GLUT_DOWN) {
         clickCoords[0] = x;
         clickCoords[1] = y;
@@ -36,7 +49,7 @@ void MouseButton(int button, int state, int x, int y) {
 }
 
 
-void MouseMotion(int x, int y) {
+void mouseMotion(int x, int y) {
     if(isLeftClick && !isRightClick && !isMiddleClick) {
         viewer->orbit(clickCoords[0] - x, clickCoords[1] - y);
         glutPostRedisplay();
@@ -52,27 +65,23 @@ void MouseMotion(int x, int y) {
 }
 
 
+void loadObject(int id) {
+    viewer->loadModel(filename);
+}
+
+
+void deleteModel(int id) {
+    viewer->deleteModel();
+}
+
+
 void parseCommand(char *ln) {
     char *ctok = strtok(ln, " ");
 
     if(ctok) {
         std::string tok(ctok);
 
-        if(tok == "L") {
-            std::string arg(strtok(NULL, " "));
-            if(arg.length() >= 4) {
-                if(arg.compare(arg.length() - 4, 4, ".obj")) {
-                    arg += ".obj";
-                }
-            }
-            std::cout << "Loading file " << arg << "..." << std::endl;
-            viewer->loadModel(arg);
-        } 
-        else if(tok == "D") {
-            std::cout << "Deleting current object..." << std::endl;  
-            viewer->deleteModel();
-        } 
-        else if(tok == "I") {
+        if(tok == "I") {
             std::cout << "Loading identity matrix..." << std::endl;   
             viewer->loadIdentity();
         } 
@@ -81,11 +90,7 @@ void parseCommand(char *ln) {
             float y = std::stof(std::string(strtok(NULL, " ")));
             float z = std::stof(std::string(strtok(NULL, " ")));
 
-            if(tok == "T") {
-                std::cout << "Translating model..." << std::endl;  
-                viewer->translate(x, y, z);
-            }
-            else if(tok == "S") {
+            if(tok == "S") {
                 std::cout << "Scaling model..." << std::endl;  
                 viewer->scale(x, y, z);
             }
@@ -95,59 +100,31 @@ void parseCommand(char *ln) {
                 viewer->rotate(x, y, z, t);
             }
         } 
-        else if(tok == "V") {
-            std::cout << "Using camera coordinates..." << std::endl;
-            viewer->useCameraCoordinates(true);
-        } 
-        else if(tok == "W") {
-            std::cout << "Using world coordinates..." << std::endl;
-            viewer->useCameraCoordinates(false);
-        } 
-        else if(tok == "N") {
-            std::string arg(strtok(NULL, " "));
-            if(arg == "face") {
-                bool show = viewer->toggleFaceNormals();
-                std::cout << "Show face normals: " << (show ? "ON" : "OFF") << std::endl;
-            }
-            else if(arg == "vertex") {
-                bool show = viewer->toggleVertexNormals();
-                std::cout << "Show vertex normals: " << (show ? "ON" : "OFF") << std::endl;
-            }
-        }
-        else if(tok == "M") {
-            std::string arg(strtok(NULL, " "));
-            if(arg == "wire") {
-                viewer->setMode(MODE_WIRE);
-            } 
-            else if(arg == "solid") {
-                viewer->setMode(MODE_SOLID);  
-            } 
-            else if(arg == "lit") {
-                viewer->setMode(MODE_LIT);   
-            } 
-            else if(arg == "point") {
-                viewer->setMode(MODE_POINT);
-            } 
-        }
-        else {
-            std::cout << "Command " << tok << " is not valid." << std::endl;
-        }
         glutPostRedisplay();
     }
 }
 
 
-void keyboard(unsigned char key, int x, int y) {
-    if(key == 'c') {
-        std::cout << "Enter command: ";
-        char ln[256];
-        std::cin.getline(ln, 256);
-        parseCommand(ln);
-    }
+void translate(int id) {
+    viewer->setTranslation(translation);
+}
+
+
+void scale(int id) {
+    viewer->setScale(scaling);
+}
+
+
+void idle() {
+    glutSetWindow(main_window);
+    glutPostRedisplay();
 }
 
 
 void display() {
+    viewer->setMode(renderMode);   
+    viewer->showFaceNormals(showFaceNormals);
+    viewer->showVertexNormals(showVertNormals);
     viewer->display();
 }
 
@@ -155,39 +132,80 @@ void display() {
 int main(int argc, char *argv[]) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowSize(700, 700);
-    glutCreateWindow("Model Viewer - ctd487");
+    glutInitWindowSize(900, 700);
+    main_window = glutCreateWindow("Scene Graph - ctd487");
 
     // Set callbacks
-    glutReshapeFunc(reshape);
-    glutDisplayFunc(display);
-    glutMouseFunc(MouseButton);
-    glutMotionFunc(MouseMotion);
-    glutKeyboardFunc(keyboard);
+    glutDisplayFunc( display );
+    GLUI_Master.set_glutReshapeFunc( reshape );  
+    GLUI_Master.set_glutSpecialFunc( NULL );
+    GLUI_Master.set_glutMouseFunc( mouseButton );
+    glutMotionFunc( mouseMotion );
 
     glEnable(GL_DEPTH_TEST);
     glClearColor (0.1, 0.1, 0.1, 1.0);
 
     viewer = new ModelViewer();
+    viewer->loadModel("models/cessna.obj");
+    translation = viewer->getTranslation();
+    scaling = viewer->getScale();
 
-    // Load initialization file
-    if(argc == 3) {
-        using namespace std;
-        string flag(argv[1]);
-        string arg(argv[2]);
+    // Setup right subwindow
+    glui = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_RIGHT );
+    
+    // Render options panel
+    GLUI_Panel *renderOptions = new GLUI_Panel( glui, "Render Options" );
+    
+    // Render mode dropdown menu
+    GLUI_Listbox *list = new GLUI_Listbox(renderOptions, "Render Mode", &renderMode);
+    list->add_item(MODE_LIT, "Lit");
+    list->add_item(MODE_SOLID, "Solid");
+    list->add_item(MODE_WIRE, "Wireframe");
+    list->add_item(MODE_POINT, "Point");
+  
+    new GLUI_StaticText( renderOptions, "" );
+    
+    // Checkboxes to toggle normals
+    new GLUI_Checkbox( renderOptions, "Draw Face Normals", &showFaceNormals );
+    new GLUI_Checkbox( renderOptions, "Draw Vertex Normals", &showVertNormals );
 
-        if(flag == "-f") {
-            cout << "Running commands from file " << arg << "..." << endl;
-            ifstream ifs(arg);
+    // Text box to enter a .obj filename
+    glui->add_edittext( "Filename:", GLUI_EDITTEXT_TEXT, &filename  );
+    glui->add_button( "Load .obj File", 0, loadObject );
+    glui->add_button( "Delete Model", 0, deleteModel );
 
-            while(ifs) {
-                char ln[256];
-                ifs.getline(ln, 256);
-                parseCommand(ln);
-            }
-        }
+    // Setup bottom subwindow
+    glui2 = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_BOTTOM );
 
-    }
+    // Rotation widget
+    GLUI_Rotation *view_rot = new GLUI_Rotation(glui2, "Rotate", rotation );
+    view_rot->set_spin( 1.0 );
+    
+    // Translate X widget
+    new GLUI_Column( glui2, true );
+    GLUI_Translation *trans_x = new GLUI_Translation(glui2, "Translate X", GLUI_TRANSLATION_X, &translation.x, 0, translate);
+    trans_x->set_speed( .005 );
+    
+    // Translate Y widget
+    new GLUI_Column( glui2, false );
+    GLUI_Translation *trans_y = new GLUI_Translation(glui2, "Translate Y", GLUI_TRANSLATION_Y, &translation.y, 0, translate);
+    trans_y->set_speed( .005 );
+    
+    // Translate Z widget
+    new GLUI_Column( glui2, false );
+    GLUI_Translation *trans_z = new GLUI_Translation(glui2, "Translate Z", GLUI_TRANSLATION_Z, &translation.z, 0, translate);
+    trans_z->set_speed( .005 );
+
+    // Scaling controls
+    new GLUI_Column( glui2, true );
+    new GLUI_Spinner( glui2, "Scale X", &scaling.x, 0, scale );
+    new GLUI_Spinner( glui2, "Scale Y", &scaling.y, 0, scale );
+    new GLUI_Spinner( glui2, "Scale Z", &scaling.z, 0, scale );
+
+    glui->set_main_gfx_window( main_window );
+    glui2->set_main_gfx_window( main_window );
+    GLUI_Master.set_glutIdleFunc( idle );
+
     glutMainLoop();
     delete viewer;
     return 0;

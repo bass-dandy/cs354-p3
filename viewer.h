@@ -88,7 +88,6 @@ class ModelViewer {
                 float zNear = 0.01f;
                 float zFar  = zNear + camera.dist + models.top().getMaxDelta();
 
-                glViewport(0, 0, w, h);
                 glMatrixMode(GL_PROJECTION);
                 glLoadIdentity();
                 gluPerspective(45.0, w/h, zNear, zFar);
@@ -200,14 +199,28 @@ class ModelViewer {
             this->isCameraCoordinates = isCameraCoordinates;
         }
 
-        bool toggleFaceNormals() {
-            isFaceNormals = !isFaceNormals;
-            return isFaceNormals;
+        void showFaceNormals(bool show) {
+            isFaceNormals = show;
         }
 
-        bool toggleVertexNormals() {
-            isVertexNormals = !isVertexNormals;
-            return isVertexNormals;
+        void showVertexNormals(bool show) {
+            isVertexNormals = show;
+        }
+
+        Point getTranslation() {
+            return models.top().getTranslation();
+        }
+
+        void setTranslation(Point p) {
+            models.top().setTranslation(p);
+        }
+
+        Point getScale() {
+            return models.top().getScale();
+        }
+
+        void setScale(Point p) {
+            models.top().setScale(p);
         }
 
         void setMode(int mode) { this->mode = mode; }

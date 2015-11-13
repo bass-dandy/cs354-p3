@@ -192,12 +192,15 @@ class Trimesh {
         Point    translation;
         Point    scaling;
 
+        Point applyTransformations(Point p) {
+            return rotation * ((p + translation) * scaling);
+        }
 
         void drawVerts() {
             glPointSize(3.0);
             glBegin(GL_POINTS);
             for(int i = 0; i < verts.size(); ++i) {
-                Point p = rotation * ((verts[i] + translation) * scaling);
+                Point p = applyTransformations(verts[i]);
                 glVertex3f(p.x, p.y, p.z);
             }
             glEnd();
@@ -208,8 +211,8 @@ class Trimesh {
                 glColor3f(0.0f, 1.0f, 1.0f);
                 
                 for(int i = 0; i < verts.size(); ++i) {
-                    Point p = verts[i];
-                    Point n = p.normal->normalize();
+                    Point p = applyTransformations(verts[i]);
+                    Point n = (verts[i].normal)->normalize();
 
                     glBegin(GL_LINES);
                     glVertex3f(p.x, p.y, p.z);
@@ -230,9 +233,12 @@ class Trimesh {
                     p += verts[f.ids[2]];
                     p /= 3.0f;
 
+                    p = applyTransformations(p);
+                    Point n = f.normal.normalize();
+
                     glBegin(GL_LINES);
                     glVertex3f(p.x, p.y, p.z);
-                    glVertex3f(f.normal.x + p.x, f.normal.y + p.y, f.normal.z + p.z);
+                    glVertex3f(n.x + p.x, n.y + p.y, n.z + p.z);
                     glEnd();
                 }
             }
@@ -244,7 +250,7 @@ class Trimesh {
             
                 glBegin(GL_TRIANGLES);
                 for(int j = 0; j < 3; ++j) { 
-                    Point p = rotation * ((verts[f.ids[j]] + translation) * scaling);
+                    Point p = applyTransformations(verts[f.ids[j]]);
                     Point n = verts[f.ids[j]].normal->normalize();
                     glNormal3f(n.x, n.y, n.z);
                     glVertex3f(p.x, p.y, p.z);
@@ -359,6 +365,26 @@ class Trimesh {
                     break;
             }
             drawNormals(isVertexNormals, isFaceNormals);
+        }
+
+        Point getTranslation() {
+            return translation;
+        }
+
+        void setTranslation(Point p) {
+            translation.x = p.x;
+            translation.y = p.y;
+            translation.z = p.z;
+        }
+
+        Point getScale() {
+            return scaling;
+        }
+
+        void setScale(Point p) {
+            scaling.x = p.x;
+            scaling.y = p.y;
+            scaling.z = p.z;
         }
 };
 
