@@ -110,74 +110,6 @@ class ModelViewer {
         }
 
 
-        void translate(float x, float y, float z) {
-            if(!models.empty()) {
-                if(isCameraCoordinates) {
-                    GLfloat view[16];
-                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
-                    
-                    Point right(view[0], view[4], view[8]);
-                    Point    up(view[1], view[5], view[9]);
-                    Point  back(view[2], view[6], view[10]);
-                    
-                    right = right.normalize() * x;
-                    up    = up.normalize()    * y;
-                    back  = back.normalize()  * z;
-
-                    x = right.x + up.x + back.x;
-                    y = right.y + up.y + back.y;
-                    z = right.z + up.z + back.z;
-                }
-                models.top().translate(x, y, z);
-            }
-        }
-
-
-        void scale(float x, float y, float z) {
-            if(!models.empty()) {
-                if(isCameraCoordinates) {
-                    GLfloat view[16];
-                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
-                    
-                    Point right(view[0], view[4], view[8]);
-                    Point    up(view[1], view[5], view[9]);
-                    Point  back(view[2], view[6], view[10]);
-                    
-                    right = right.normalize() * x;
-                    up    = up.normalize()    * y;
-                    back  = back.normalize()  * z;
-
-                    x = right.x + up.x + back.x;
-                    y = right.y + up.y + back.y;
-                    z = right.z + up.z + back.z;
-                }
-                models.top().scale(x, y, z);
-            }
-        }
-
-
-        void rotate(float t, float x, float y, float z) {
-            if(!models.empty()) {
-                if(isCameraCoordinates) {
-                    GLfloat view[16];
-                    glGetFloatv(GL_MODELVIEW_MATRIX, view);
-                    
-                    Point right = Point(view[0], view[4], view[8]).normalize();
-                    Point    up = Point(view[1], view[5], view[9]).normalize();
-                    Point  back = Point(view[2], view[6], view[10]).normalize();
-                    
-                    Point camX = right * x;
-                    Point camY = up    * y;
-                    Point camZ = back  * z;
-                    
-                    x = camX.x + camY.x + camZ.x;
-                    y = camX.y + camY.y + camZ.y;
-                    z = camX.z + camY.z + camZ.z;
-                }
-                models.top().rotate(t, x, y, z);
-            }
-        }
-
         void deleteModel() {
             if(!models.empty()) {
                 models.pop();
@@ -221,6 +153,14 @@ class ModelViewer {
 
         void setScale(Point p) {
             models.top().setScale(p);
+        }
+
+        float *getRotation() {
+            return models.top().getRotation();
+        }
+
+        void setRotation(float *r) {
+            models.top().setRotation(r);
         }
 
         void setMode(int mode) { this->mode = mode; }

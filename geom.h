@@ -70,71 +70,6 @@ struct Point {
     }
 };
 
-// A 3x3, column-major matrix
-struct MatrixR3 {
-
-    float mat[9];
-
-    static MatrixR3 identity() {
-        MatrixR3 i;
-        i[0] = 1.0f; i[3] = 0.0f; i[6] = 0.0f;
-        i[1] = 0.0f; i[4] = 1.0f; i[7] = 0.0f;
-        i[2] = 0.0f; i[5] = 0.0f; i[8] = 1.0f;
-        return i;
-    }
-
-    float &operator[](int idx) {
-        return mat[idx];
-    }
-
-    const float operator[](int idx) const {
-        return mat[idx];
-    }
-
-    MatrixR3 operator+(const MatrixR3 &other) {
-        MatrixR3 sum;
-        for(int i = 0; i < 9; ++i) {
-            sum[i] = this->mat[i] + other[i];
-        }
-        return sum;
-    }
-
-    MatrixR3 operator*(const MatrixR3 &other) {
-        MatrixR3 p;
-
-        // Column 0
-        p[0] = this->mat[0] * other[0] + this->mat[3] * other[1] + this->mat[6] * other[2];
-        p[1] = this->mat[1] * other[0] + this->mat[4] * other[1] + this->mat[7] * other[2];
-        p[2] = this->mat[2] * other[0] + this->mat[5] * other[1] + this->mat[8] * other[2];
-
-        // Column 1
-        p[3] = this->mat[0] * other[3] + this->mat[3] * other[4] + this->mat[6] * other[5];
-        p[4] = this->mat[1] * other[3] + this->mat[4] * other[4] + this->mat[7] * other[5];
-        p[5] = this->mat[2] * other[3] + this->mat[5] * other[4] + this->mat[8] * other[5];
-
-        // Column 2
-        p[6] = this->mat[0] * other[6] + this->mat[3] * other[7] + this->mat[6] * other[8];
-        p[7] = this->mat[1] * other[6] + this->mat[4] * other[7] + this->mat[7] * other[8];
-        p[8] = this->mat[2] * other[6] + this->mat[5] * other[7] + this->mat[8] * other[8];
-
-        return p;
-    }
-
-    MatrixR3 operator*(float f) {
-        MatrixR3 prod;
-        for(int i = 0; i < 9; ++i) {
-            prod[i] = this->mat[i] * f;
-        }
-        return prod;
-    }
-
-    Point operator*(const Point &p) {
-        float x = mat[0] * p.x + mat[3] * p.y + mat[6] * p.z;
-        float y = mat[1] * p.x + mat[4] * p.y + mat[7] * p.z;
-        float z = mat[2] * p.x + mat[5] * p.y + mat[8] * p.z;
-        return Point(x, y, z);
-    }
-};
 
 class Trimesh {
 
@@ -188,19 +123,15 @@ class Trimesh {
         float maxZ = FLT_MIN;
 
         // For computing transformations
-        MatrixR3 rotation;
-        Point    translation;
-        Point    scaling;
-
-        Point applyTransformations(Point p) {
-            return rotation * ((p + translation) * scaling);
-        }
+        float rotation[16];
+        Point translation;
+        Point scaling;
 
         void drawVerts() {
             glPointSize(3.0);
             glBegin(GL_POINTS);
             for(int i = 0; i < verts.size(); ++i) {
-                Point p = applyTransformations(verts[i]);
+                Point p = verts[i];
                 glVertex3f(p.x, p.y, p.z);
             }
             glEnd();
@@ -211,8 +142,8 @@ class Trimesh {
                 glColor3f(0.0f, 1.0f, 1.0f);
                 
                 for(int i = 0; i < verts.size(); ++i) {
-                    Point p = applyTransformations(verts[i]);
-                    Point n = (verts[i].normal)->normalize();
+                    Point p = verts[i];
+                    Point n = (p.normal)->normalize();
 
                     glBegin(GL_LINES);
                     glVertex3f(p.x, p.y, p.z);
@@ -233,7 +164,6 @@ class Trimesh {
                     p += verts[f.ids[2]];
                     p /= 3.0f;
 
-                    p = applyTransformations(p);
                     Point n = f.normal.normalize();
 
                     glBegin(GL_LINES);
@@ -250,8 +180,8 @@ class Trimesh {
             
                 glBegin(GL_TRIANGLES);
                 for(int j = 0; j < 3; ++j) { 
-                    Point p = applyTransformations(verts[f.ids[j]]);
-                    Point n = verts[f.ids[j]].normal->normalize();
+                    Point p = verts[f.ids[j]];
+                    Point n = p.normal->normalize();
                     glNormal3f(n.x, n.y, n.z);
                     glVertex3f(p.x, p.y, p.z);
                 }
@@ -261,7 +191,7 @@ class Trimesh {
 
     public:
 
-        Trimesh() : scaling(Point(1.0f, 1.0f, 1.0f)), rotation(MatrixR3::identity()) {}
+        Trimesh() : scaling(Point(1.0f, 1.0f, 1.0f)), rotation{ 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 } {}
 
         void addFace(const int *ids) {
             Face f(ids, verts);
@@ -308,36 +238,19 @@ class Trimesh {
             return maxDelta;
         }
 
-        void translate(float x, float y, float z) {
-            this->translation += Point(x, y, z);
-        }
-
-        void scale(float x, float y, float z) {
-            this->scaling += Point(x, y, z);
-        }
-
-        void rotate(float theta, float x, float y, float z) {
-            Point axis = Point(x, y, z).normalize();
-            MatrixR3 i = MatrixR3::identity();
-            MatrixR3 w;
-
-            // Compute rotation matrix and apply it to current rotation
-            w[0] = 0.0f;    w[3] = -axis.z; w[6] = axis.y;
-            w[1] = axis.z;  w[4] = 0.0f;    w[7] = -axis.x;
-            w[2] = -axis.y; w[5] = axis.x;  w[8] = 0.0f;
-
-            MatrixR3 rot = i + w * sin(theta) + w * w * (1 - cos(theta));
-            rotation = rotation * rot;
-        }
-
         void identity() {
             // Reset all transformations
             this->translation = Point();
             this->scaling     = Point(1.0f, 1.0f, 1.0f);
-            this->rotation    = MatrixR3::identity();
+            //this->rotation    = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
         }
 
         void draw(int mode, bool isVertexNormals, bool isFaceNormals) {
+            glMatrixMode(GL_MODELVIEW);
+            glPushMatrix();
+            glTranslatef(translation.x, translation.y, translation.z);
+            glScalef(scaling.x, scaling.y, scaling.z);
+            glMultMatrixf(rotation);
             switch(mode) {
                 case MODE_POINT:
                     glColor3f(1.0f, 0.0f, 0.0f);
@@ -365,6 +278,7 @@ class Trimesh {
                     break;
             }
             drawNormals(isVertexNormals, isFaceNormals);
+            glPopMatrix();
         }
 
         Point getTranslation() {
@@ -385,6 +299,16 @@ class Trimesh {
             scaling.x = p.x;
             scaling.y = p.y;
             scaling.z = p.z;
+        }
+
+        float *getRotation() {
+            return rotation;
+        }
+
+        void setRotation(float *r) {
+            for(int i = 0; i < 16; ++i) {
+                rotation[i] = r[i];
+            }
         }
 };
 

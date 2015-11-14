@@ -26,7 +26,7 @@ int showFaceNormals = 0;
 int showVertNormals = 0;
 Point translation;
 Point scaling;
-float rotation[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
+float *rotation;
 
 void reshape(int w, int h) {
     viewer->setViewport(w, h);
@@ -75,36 +75,6 @@ void deleteModel(int id) {
 }
 
 
-void parseCommand(char *ln) {
-    char *ctok = strtok(ln, " ");
-
-    if(ctok) {
-        std::string tok(ctok);
-
-        if(tok == "I") {
-            std::cout << "Loading identity matrix..." << std::endl;   
-            viewer->loadIdentity();
-        } 
-        else if(tok == "T" || tok == "S" || tok == "R") {
-            float x = std::stof(std::string(strtok(NULL, " ")));
-            float y = std::stof(std::string(strtok(NULL, " ")));
-            float z = std::stof(std::string(strtok(NULL, " ")));
-
-            if(tok == "S") {
-                std::cout << "Scaling model..." << std::endl;  
-                viewer->scale(x, y, z);
-            }
-            else {
-                std::cout << "Rotating model counterclockwise..." << std::endl;
-                float t = std::stof(std::string(strtok(NULL, " ")));
-                viewer->rotate(x, y, z, t);
-            }
-        } 
-        glutPostRedisplay();
-    }
-}
-
-
 void translate(int id) {
     viewer->setTranslation(translation);
 }
@@ -112,6 +82,10 @@ void translate(int id) {
 
 void scale(int id) {
     viewer->setScale(scaling);
+}
+
+void identity(int id) {
+    viewer->loadIdentity();
 }
 
 
@@ -149,6 +123,7 @@ int main(int argc, char *argv[]) {
     viewer->loadModel("models/cessna.obj");
     translation = viewer->getTranslation();
     scaling = viewer->getScale();
+    rotation = viewer->getRotation();
 
     // Setup right subwindow
     glui = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_RIGHT );
@@ -201,6 +176,10 @@ int main(int argc, char *argv[]) {
     new GLUI_Spinner( glui2, "Scale X", &scaling.x, 0, scale );
     new GLUI_Spinner( glui2, "Scale Y", &scaling.y, 0, scale );
     new GLUI_Spinner( glui2, "Scale Z", &scaling.z, 0, scale );
+
+    // Reset
+    new GLUI_Column( glui2, true );
+    new GLUI_Button( glui2, "Reset", 0, identity);
 
     glui->set_main_gfx_window( main_window );
     glui2->set_main_gfx_window( main_window );
