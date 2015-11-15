@@ -12,16 +12,19 @@ enum {
     ID_ROTATE,
     ID_IDENTITY,
     ID_SELECT_CHILD,
-    ID_SELECT_PARENT
+    ID_SELECT_PARENT,
+    ID_ADD_CHILD,
+    ID_DELETE_CHILD
 };
 
 SceneGraph *sg;
 
 // GLUI components
 int main_window;
-GLUI *glui, *glui2;
+GLUI *glui, *panel_transform;
 GLUI_Listbox *childList;
 GLUI_StaticText *selectedNodeName;
+GLUI_Panel *panel_object, *panel_geom, *panel_attr;
 
 // GLUI live variables
 char filename[128];
@@ -80,6 +83,9 @@ void readLiveVars(SGNode *n) {
         for(int i = 0; i < 16; ++i) {
             rotation[i] = t->rotation[i];
         }
+        panel_transform->enable();
+    } else {
+        panel_transform->disable();
     }
     if(n->getNodeType() == NODE_TRANSFORM || n->getNodeType() == NODE_OBJECT) {
         ParentNode *p = static_cast<ParentNode*>(n);
@@ -97,7 +103,7 @@ void readLiveVars(SGNode *n) {
             }
         }
     }
-    selectedNodeName->set_text(std::string("Selected node: " + n->getName()).c_str());
+    selectedNodeName->set_text(std::string("Name: " + n->getName()).c_str());
     GLUI_Master.sync_live_all();
 }
 
@@ -119,6 +125,10 @@ void transform_cb(int id) {
                 t->rotation[i] = rotation[i];
             }
             break;
+        case ID_IDENTITY:
+            t->reset();
+            readLiveVars(t);
+            break;
     }
 }
 
@@ -132,13 +142,27 @@ void traverse_cb(int id) {
             n = sg->selectParent();
             break;
     }
-    if(n->getNodeType() == NODE_TRANSFORM) {
-        // TODO: enable transform controls
-        readLiveVars(n);
+    readLiveVars(n);
+}
+
+void crud_cb(int id) {
+    switch(id) {
+        case ID_ADD_CHILD:
+            sg->addChild(nodeType);
+            break;
+        case ID_DELETE_CHILD:
+            sg->deleteChild(childIdx);
+            break;
     }
-    else {
-        // TODO: disable transform controls
-    }
+    readLiveVars(sg->getCurrent());
+}
+
+void node_cb(int id) {
+
+}
+
+void object_cb(int id) {
+
 }
 
 int main(int argc, char *argv[]) {
@@ -151,14 +175,19 @@ int main(int argc, char *argv[]) {
     glutDisplayFunc( display );
     GLUI_Master.set_glutReshapeFunc( reshape );  
     GLUI_Master.set_glutSpecialFunc( NULL );
+    GLUI_Master.set_glutIdleFunc( idle );
 
     glEnable(GL_DEPTH_TEST);
     glClearColor (0.1, 0.1, 0.1, 1.0);
 
     // Setup right subwindow
     glui = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_RIGHT );
+    glui->set_main_gfx_window( main_window );
+
+    /*************************************************************************/
+    /* Render Options Panel **************************************************/
+    /*************************************************************************/
     
-    // Render options panel
     GLUI_Panel *renderOptions = new GLUI_Panel( glui, "Render Options" );
     
     // Render mode dropdown menu
@@ -173,42 +202,92 @@ int main(int argc, char *argv[]) {
     // Checkboxes to toggle normals
     new GLUI_Checkbox( renderOptions, "Draw Face Normals", &showFaceNormals );
     new GLUI_Checkbox( renderOptions, "Draw Vertex Normals", &showVertNormals );
+ 
+    /*************************************************************************/
+    /* SG Options Panel ******************************************************/
+    /*************************************************************************/
 
-    // Text box to enter a .obj filename
-    glui->add_edittext( "Filename: ", GLUI_EDITTEXT_TEXT, &filename  );
-    //glui->add_button( "Load .obj File", 0, loadObject );
-    //glui->add_button( "Delete Model", 0, deleteModel );
+    GLUI_Panel *sgOptions = new GLUI_Panel( glui, "Selected Node" );
+    selectedNodeName = new GLUI_StaticText(sgOptions, "Name: ");
     
-    // Traversal controls
-    GLUI_Panel *sgOptions = new GLUI_Panel( glui, "Scene Graph" );
-    selectedNodeName = new GLUI_StaticText(sgOptions, "Selected node: ");
+    new GLUI_Button( sgOptions, "Select Parent", ID_SELECT_PARENT, traverse_cb );
 
-    GLUI_Panel *traverseOptions = new GLUI_Panel( sgOptions, "Traversal" );
+    GLUI_Panel *childOptions = new GLUI_Panel( sgOptions, "Children" );
 
-    childList = new GLUI_Listbox(traverseOptions, "Child: ", &childIdx);
-    new GLUI_Column( traverseOptions, false );
-    new GLUI_Button( traverseOptions, "Select Child", ID_SELECT_CHILD, traverse_cb );
-    new GLUI_Button( traverseOptions, "Select Parent", ID_SELECT_PARENT, traverse_cb );
+    childList = new GLUI_Listbox(childOptions, "Child: ", &childIdx);
 
-    GLUI_Panel *adOptions = new GLUI_Panel( sgOptions, "Add/Delete" );
-    GLUI_Listbox *nodeTypeList = new GLUI_Listbox(adOptions, "Node Type: ", &nodeType);
-    nodeTypeList->add_item(NODE_OBJECT, "Object");
+    new GLUI_Column( childOptions, false );
+    new GLUI_Button( childOptions, "Select Child",  ID_SELECT_CHILD, traverse_cb );
+    new GLUI_Button( childOptions, "Delete Child",  ID_DELETE_CHILD, crud_cb);
+
+    /*************************************************************************/
+    /* Node Addition Panel ***************************************************/
+    /*************************************************************************/
+
+    GLUI_Panel *addOptions = new GLUI_Panel( sgOptions, "" );
+
+    GLUI_Listbox *nodeTypeList = new GLUI_Listbox( addOptions, "Type: ", &nodeType );
+    nodeTypeList->add_item(NODE_OBJECT,    "Object");
     nodeTypeList->add_item(NODE_TRANSFORM, "Transform");
-    nodeTypeList->add_item(NODE_GEOM, "Geometry");
-    nodeTypeList->add_item(NODE_ATTR, "Attribute");
-    nodeTypeList->add_item(NODE_LIGHT, "Light");
-    nodeTypeList->add_item(NODE_CAMERA, "Camera");
+    nodeTypeList->add_item(NODE_GEOM,      "Geometry");
+    nodeTypeList->add_item(NODE_ATTR,      "Attribute");
+    nodeTypeList->add_item(NODE_LIGHT,     "Light");
 
-    // Setup bottom subwindow
-    glui2 = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_BOTTOM );
+    new GLUI_Column( addOptions, false );
+    new GLUI_Button( addOptions, "Add Child", ID_ADD_CHILD, crud_cb );
+
+    new GLUI_StaticText( sgOptions, "" );
+
+    /*************************************************************************/
+    /* Node Options Panels ***************************************************/
+    /*************************************************************************/
+
+    panel_object = new GLUI_Panel( sgOptions, "Object Node" );
+    panel_geom   = new GLUI_Panel( sgOptions, "Geometry Node" );
+    panel_attr   = new GLUI_Panel( sgOptions, "Attribute Node" );
+
+    // Object node options
+    new GLUI_Button( panel_object, "Add Geometry",   NODE_GEOM, object_cb );
+    new GLUI_Column( panel_object, false );
+    new GLUI_Button( panel_object, "Add Attributes", NODE_ATTR, object_cb );
+
+    // Geometry node options
+    glui->add_edittext_to_panel( panel_geom, "Path: ", GLUI_EDITTEXT_TEXT, &filename );
+    new GLUI_Column( panel_geom, false );
+    new GLUI_Button( panel_geom, "Load File",   NODE_GEOM, node_cb );
+    new GLUI_Button( panel_geom, "Delete Node", NODE_GEOM, crud_cb );
+
+    // Attribute node options
+    GLUI_Listbox *attr_list = new GLUI_Listbox(panel_attr, "Render Mode: ", &renderMode);
+    attr_list->add_item(MODE_LIT, "Lit");
+    attr_list->add_item(MODE_SOLID, "Solid");
+    attr_list->add_item(MODE_WIRE, "Wireframe");
+    attr_list->add_item(MODE_POINT, "Point");
+  
+    new GLUI_StaticText( panel_attr, "" );
+    
+    // Checkboxes to toggle normals
+    new GLUI_Checkbox( panel_attr, "Draw Face Normals", &showFaceNormals );
+    new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &showVertNormals );
+
+    new GLUI_StaticText( panel_attr, "" );
+    new GLUI_Button( panel_attr, "Delete Node", NODE_ATTR, crud_cb );
+
+    /*************************************************************************/
+    /* Transform Node Panel **************************************************/
+    /*************************************************************************/
+
+    // Create bottom subwindow
+    panel_transform = GLUI_Master.create_glui_subwindow( main_window, GLUI_SUBWINDOW_BOTTOM );
+    panel_transform->set_main_gfx_window( main_window );
 
     // Rotation widget
-    GLUI_Rotation *view_rot = new GLUI_Rotation(glui2, "Rotate", rotation, ID_ROTATE, transform_cb);
+    GLUI_Rotation *view_rot = new GLUI_Rotation(panel_transform, "Rotate", rotation, ID_ROTATE, transform_cb);
     view_rot->set_spin( 1.0 );
     
     // Translate X widget
-    new GLUI_Column( glui2, true );
-    GLUI_Translation *trans_x = new GLUI_Translation(glui2, 
+    new GLUI_Column( panel_transform, true );
+    GLUI_Translation *trans_x = new GLUI_Translation(panel_transform, 
                                                      "Translate X", 
                                                      GLUI_TRANSLATION_X, 
                                                      &translation.x, 
@@ -217,8 +296,8 @@ int main(int argc, char *argv[]) {
     trans_x->set_speed( .005 );
     
     // Translate Y widget
-    new GLUI_Column( glui2, false );
-    GLUI_Translation *trans_y = new GLUI_Translation(glui2, 
+    new GLUI_Column( panel_transform, false );
+    GLUI_Translation *trans_y = new GLUI_Translation(panel_transform, 
                                                      "Translate Y", 
                                                      GLUI_TRANSLATION_Y, 
                                                      &translation.y, 
@@ -227,8 +306,8 @@ int main(int argc, char *argv[]) {
     trans_y->set_speed( .005 );
     
     // Translate Z widget
-    new GLUI_Column( glui2, false );
-    GLUI_Translation *trans_z = new GLUI_Translation(glui2, 
+    new GLUI_Column( panel_transform, false );
+    GLUI_Translation *trans_z = new GLUI_Translation(panel_transform, 
                                                      "Translate Z", 
                                                      GLUI_TRANSLATION_Z, 
                                                      &translation.z, 
@@ -237,18 +316,14 @@ int main(int argc, char *argv[]) {
     trans_z->set_speed( .005 );
 
     // Scaling controls
-    new GLUI_Column(glui2, true);
-    new GLUI_Spinner(glui2, "Scale X", &scaling.x, ID_SCALE, transform_cb);
-    new GLUI_Spinner(glui2, "Scale Y", &scaling.y, ID_SCALE, transform_cb);
-    new GLUI_Spinner(glui2, "Scale Z", &scaling.z, ID_SCALE, transform_cb);
+    new GLUI_Column(panel_transform, true);
+    new GLUI_Spinner(panel_transform, "Scale X", &scaling.x, ID_SCALE, transform_cb);
+    new GLUI_Spinner(panel_transform, "Scale Y", &scaling.y, ID_SCALE, transform_cb);
+    new GLUI_Spinner(panel_transform, "Scale Z", &scaling.z, ID_SCALE, transform_cb);
 
-    // Reset transform
-    new GLUI_Column(glui2, true);
-    new GLUI_Button( glui2, "Reset", ID_IDENTITY, transform_cb);
-
-    glui->set_main_gfx_window( main_window );
-    glui2->set_main_gfx_window( main_window );
-    GLUI_Master.set_glutIdleFunc( idle );
+    // Reset transform button
+    new GLUI_Column(panel_transform, true);
+    new GLUI_Button(panel_transform, "Reset", ID_IDENTITY, transform_cb);
 
     // Setup scene graph and live vars
     sg = new SceneGraph();

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "geom.h"
+#include "loader.h"
 
 // Node types
 enum {
@@ -35,6 +36,8 @@ class SGNode {
         SGNode *getParent() { return parent; }
 
         virtual int getNodeType() = 0;
+        
+        virtual void draw() {};
 };
 
 // A generic parent node
@@ -53,12 +56,19 @@ class ParentNode : public SGNode {
             children.push_back(n);
         }
 
-        void removeChild(int idx) {
-            children.erase(children.begin() + idx - 1);
+        void deleteChild(int idx) {
+            if(idx < children.size()) {
+                delete children[idx];
+                children.erase(children.begin() + idx);
+            }
         }
 };
 
 class TransformNode : public ParentNode {
+
+    private:
+
+        const float identity[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
     public:
         
@@ -71,8 +81,18 @@ class TransformNode : public ParentNode {
             rotation{ 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 },
             ParentNode(name) {}
 
+        TransformNode() : TransformNode("Transform") {}
+
         int getNodeType() {
             return NODE_TRANSFORM;
+        }
+
+        void reset() {
+            translation = Point();
+            scaling     = Point(1.0f, 1.0f, 1.0f);
+            for(int i = 0; i < 16; ++i) {
+                rotation[i] = identity[i];
+            }
         }
 
         void draw() {
@@ -98,8 +118,94 @@ class TransformNode : public ParentNode {
         }
 };
 
-class CameraNode {
+class GeometryNode : public SGNode {
 
+    private:
+
+        Trimesh *model;
+
+    public:
+
+        GeometryNode() : SGNode("Geometry") {}
+
+        void loadModel(std::string filename) {
+            if(model != NULL) {
+                delete model;
+            }
+            model = new Trimesh();
+            TrimeshLoader ldr;
+            ldr.loadOBJ(filename.c_str(), model);
+        }
+
+        int getNodeType() {
+            return NODE_GEOM;
+        }
+
+        void draw(int mode, bool drawFaceNormals, bool drawVertNormals) {
+            model->draw(mode, drawFaceNormals, drawVertNormals);
+        }
+};
+
+class AttributeNode : public SGNode {
+    
+    public:
+
+        int  renderMode;
+        bool drawFaceNormals;
+        bool drawVertNormals;
+
+        AttributeNode() : SGNode("Attributes") {}
+
+        int getNodeType() {
+            return NODE_ATTR;
+        }
+};
+
+class ObjectNode : public ParentNode {
+
+    public:
+
+        GeometryNode  *geom;
+        AttributeNode *attr;
+
+        ObjectNode(std::string name) : ParentNode(name) {}
+
+        ObjectNode() : ObjectNode("Object") {}
+
+        int getNodeType() {
+            return NODE_OBJECT;
+        }
+
+        void draw() {
+            if(geom != NULL && attr != NULL) {
+                geom->draw(attr->renderMode, attr->drawFaceNormals, attr->drawVertNormals);
+            }
+            else if(geom != NULL) {
+                geom->draw(MODE_LIT, false, false);
+            }
+        }
+};
+
+class LightNode : public SGNode {
+
+    public:
+
+        LightNode() : SGNode("Light") {}
+
+        int getNodeType() {
+            return NODE_LIGHT;
+        }
+};
+
+class CameraNode : public SGNode {
+
+    public:
+
+        CameraNode() : SGNode("Camera") {}
+
+        int getNodeType() {
+            return NODE_CAMERA;
+        }
 };
 
 #endif

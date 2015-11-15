@@ -112,20 +112,6 @@ class Trimesh {
 
         std::vector<Point> verts;
         std::vector<Face>  faces;
-        
-        // For computing initial viewing matrix
-        Point origin;
-        float minX = FLT_MAX;
-        float maxX = FLT_MIN;
-        float minY = FLT_MAX;
-        float maxY = FLT_MIN;
-        float minZ = FLT_MAX;
-        float maxZ = FLT_MIN;
-
-        // For computing transformations
-        float rotation[16];
-        Point translation;
-        Point scaling;
 
         void drawVerts() {
             glPointSize(3.0);
@@ -191,8 +177,6 @@ class Trimesh {
 
     public:
 
-        Trimesh() : scaling(Point(1.0f, 1.0f, 1.0f)), rotation{ 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 } {}
-
         void addFace(const int *ids) {
             Face f(ids, verts);
             faces.push_back(f);
@@ -206,51 +190,10 @@ class Trimesh {
             Point p(x, y, z);
             p.normal = new Point(0.0f, 0.0f, 0.0f);
             verts.push_back(p);
-
-            // Update the model's origin
-            if(x < minX)
-                minX = x;
-            else if(x > maxX)
-                maxX = x;
-            if(y < minY)
-                minY = y;
-            else if(y > maxY)
-                maxY = y;
-            if(z < minZ)
-                minZ = z;
-            else if(z > maxZ)
-                maxZ = z;
-
-            origin = Point((minX + maxX) / 2.0f, (minY + maxY) / 2.0f, (minZ + maxZ) / 2.0f);
-        }
-
-        const Point getOrigin() {
-            return this->origin;
-        }
-
-        float getMaxDelta() {
-            using namespace std;
-            float maxDelta = abs(maxX - minX);
-
-            maxDelta = abs(maxY - minY) > maxDelta ? abs(maxY - minY) : maxDelta;
-            maxDelta = abs(maxZ - minZ) > maxDelta ? abs(maxZ - minZ) : maxDelta;
-
-            return maxDelta;
-        }
-
-        void identity() {
-            // Reset all transformations
-            this->translation = Point();
-            this->scaling     = Point(1.0f, 1.0f, 1.0f);
-            //this->rotation    = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
         }
 
         void draw(int mode, bool isVertexNormals, bool isFaceNormals) {
             glMatrixMode(GL_MODELVIEW);
-            glPushMatrix();
-            glTranslatef(translation.x, translation.y, translation.z);
-            glScalef(scaling.x, scaling.y, scaling.z);
-            glMultMatrixf(rotation);
             switch(mode) {
                 case MODE_POINT:
                     glColor3f(1.0f, 0.0f, 0.0f);
@@ -278,37 +221,6 @@ class Trimesh {
                     break;
             }
             drawNormals(isVertexNormals, isFaceNormals);
-            glPopMatrix();
-        }
-
-        Point getTranslation() {
-            return translation;
-        }
-
-        void setTranslation(Point p) {
-            translation.x = p.x;
-            translation.y = p.y;
-            translation.z = p.z;
-        }
-
-        Point getScale() {
-            return scaling;
-        }
-
-        void setScale(Point p) {
-            scaling.x = p.x;
-            scaling.y = p.y;
-            scaling.z = p.z;
-        }
-
-        float *getRotation() {
-            return rotation;
-        }
-
-        void setRotation(float *r) {
-            for(int i = 0; i < 16; ++i) {
-                rotation[i] = r[i];
-            }
         }
 };
 

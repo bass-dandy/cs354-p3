@@ -14,11 +14,12 @@ class SceneGraph {
             glMatrixMode(GL_MODELVIEW);
             glPushMatrix();
 
-            if(n->getNodeType() == NODE_TRANSFORM) {
-                TransformNode *t = (TransformNode*) n;
-                t->draw();
-                for(int i = 0; i < t->children.size(); ++i) {
-                    draw(t->children[i]);
+            if(n->getNodeType() == NODE_TRANSFORM || n->getNodeType() == NODE_OBJECT) {
+                n->draw();
+
+                ParentNode *p = static_cast<ParentNode*>(n);
+                for(int i = 0; i < p->children.size(); ++i) {
+                    draw(p->children[i]);
                 }
             }
             glPopMatrix();
@@ -27,11 +28,11 @@ class SceneGraph {
     public:
 
         SceneGraph() {
-            root = new TransformNode("root");
+            root = new ObjectNode("root");
             current = root;
 
-            TransformNode *t = new TransformNode("child");
-            static_cast<TransformNode*>(root)->addChild(t);
+            TransformNode *t = new TransformNode();
+            static_cast<ParentNode*>(root)->addChild(t);
         }
 
         SGNode *getCurrent() {
@@ -41,9 +42,9 @@ class SceneGraph {
         SGNode *selectChild(int idx) {
             int type = current->getNodeType();
             if(type == NODE_TRANSFORM || type == NODE_OBJECT) {
-                TransformNode *t = static_cast<TransformNode*>(current);
-                if(idx < t->children.size()) {
-                    current = t->children[idx];
+                ParentNode *p = static_cast<ParentNode*>(current);
+                if(idx < p->children.size()) {
+                    current = p->children[idx];
                 }
             }
             return current;
@@ -54,6 +55,31 @@ class SceneGraph {
                 current = current->getParent();
             }
             return current;
+        }
+
+        SGNode *addChild(int type) {
+            SGNode *n;
+            if(current->getNodeType() == NODE_OBJECT || current->getNodeType() == NODE_TRANSFORM) {
+                switch(type) {
+                    case NODE_OBJECT:
+                        n = new ObjectNode();
+                        break;
+                    case NODE_TRANSFORM:
+                        n = new TransformNode();
+                        break;
+                    case NODE_LIGHT:
+                        // TODO
+                        break;
+                }
+                static_cast<ParentNode*>(current)->addChild(n);
+            }
+            return n;
+        }
+
+        void deleteChild(int idx) {
+            if(current->getNodeType() == NODE_OBJECT || current->getNodeType() == NODE_TRANSFORM) {
+                static_cast<ParentNode*>(current)->deleteChild(idx);
+            }
         }
 
         void display() {
