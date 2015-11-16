@@ -1,3 +1,6 @@
+// Christian Dinh
+// eid: ctd487
+
 #include <stdlib.h>
 #include <GL/glut.h>
 #include <iostream>

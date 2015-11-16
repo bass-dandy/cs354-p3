@@ -1,3 +1,6 @@
+// Christian Dinh
+// eid: ctd487
+
 #ifndef __SCENEGRAPH_H__
 #define __SCENEGRAPH_H__
 

@@ -1,3 +1,6 @@
+// Christian Dinh
+// eid: ctd487
+
 #ifndef __GEOM_H__
 #define __GEOM_H__
 

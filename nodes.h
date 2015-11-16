@@ -1,3 +1,6 @@
+// Christian Dinh
+// eid: ctd487
+
 #ifndef __NODES_H__
 #define __NODES_H__
 
