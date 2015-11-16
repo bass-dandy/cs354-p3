@@ -52,8 +52,10 @@ class ParentNode : public SGNode {
         std::vector<SGNode*> children;
 
         void addChild(SGNode *n) {
-            n->setParent(this);
-            children.push_back(n);
+            if(n != NULL) {
+                n->setParent(this);
+                children.push_back(n);
+            }
         }
 
         void deleteChild(int idx) {
@@ -142,7 +144,9 @@ class GeometryNode : public SGNode {
         }
 
         void draw(int mode, bool drawFaceNormals, bool drawVertNormals) {
-            model->draw(mode, drawFaceNormals, drawVertNormals);
+            if(model != NULL) {
+                model->draw(mode, drawFaceNormals, drawVertNormals);
+            }
         }
 };
 
@@ -165,8 +169,8 @@ class ObjectNode : public ParentNode {
 
     public:
 
-        GeometryNode  *geom;
-        AttributeNode *attr;
+        GeometryNode  *geom = NULL;
+        AttributeNode *attr = NULL;
 
         ObjectNode(std::string name) : ParentNode(name) {}
 

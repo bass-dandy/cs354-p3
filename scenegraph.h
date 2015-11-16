@@ -28,7 +28,7 @@ class SceneGraph {
     public:
 
         SceneGraph() {
-            root = new ObjectNode("root");
+            root = new ObjectNode("Root");
             current = root;
 
             TransformNode *t = new TransformNode();
@@ -58,20 +58,49 @@ class SceneGraph {
         }
 
         SGNode *addChild(int type) {
-            SGNode *n;
+            SGNode *n = NULL;
             if(current->getNodeType() == NODE_OBJECT || current->getNodeType() == NODE_TRANSFORM) {
                 switch(type) {
                     case NODE_OBJECT:
                         n = new ObjectNode();
+                        static_cast<ParentNode*>(current)->addChild(n);
                         break;
                     case NODE_TRANSFORM:
                         n = new TransformNode();
+                        static_cast<ParentNode*>(current)->addChild(n);
+                        break;
+                    case NODE_GEOM:
+                        if(current->getNodeType() == NODE_OBJECT) {
+                            ObjectNode *o = static_cast<ObjectNode*>(current);
+                            if(o->geom == NULL) {
+                                o->geom = new GeometryNode();
+                                n = o->geom;
+                            } else {
+                                std::cout << "Error: cannot add multiple geometry nodes to one object" << std::endl;
+                            }
+                        } else {
+                            std::cout << "Error: cannot add geometry node to non-object node" << std::endl;
+                        }
+                        break;
+                    case NODE_ATTR:
+                        if(current->getNodeType() == NODE_OBJECT) {
+                            ObjectNode *o = static_cast<ObjectNode*>(current);
+                            if(o->attr == NULL) {
+                                o->attr = new AttributeNode();
+                                n = o->attr;
+                            } else {
+                                std::cout << "Error: cannot add multiple attribute nodes to one object" << std::endl;
+                            }
+                        } else {
+                            std::cout << "Error: cannot add attribute node to non-object node" << std::endl;
+                        }
                         break;
                     case NODE_LIGHT:
                         // TODO
                         break;
                 }
-                static_cast<ParentNode*>(current)->addChild(n);
+            } else {
+                std::cout << "Error: cannot add child to node types other than Object or Transform" << std::endl;
             }
             return n;
         }

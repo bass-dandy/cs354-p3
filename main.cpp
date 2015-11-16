@@ -22,9 +22,9 @@ SceneGraph *sg;
 // GLUI components
 int main_window;
 GLUI *glui, *panel_transform;
+GLUI_Panel *panel_geom, *panel_attr;
 GLUI_Listbox *childList;
 GLUI_StaticText *selectedNodeName;
-GLUI_Panel *panel_object, *panel_geom, *panel_attr;
 
 // GLUI live variables
 char filename[128];
@@ -32,10 +32,14 @@ int renderMode = MODE_LIT;
 int showFaceNormals = 0;
 int showVertNormals = 0;
 
+int attr_renderMode = MODE_LIT;
+int attr_showFaceNormals = 0;
+int attr_showVertNormals = 0;
+
 int childIdx;
 int childCnt;
 
-int nodeType;
+int lv_createNodeType = NODE_OBJECT;
 
 Point translation;
 Point scaling;
@@ -69,6 +73,11 @@ void display() {
 }
 
 void readLiveVars(SGNode *n) {
+    panel_transform->disable();
+    panel_geom->disable();
+    panel_attr->disable();
+
+    // If node is transform node, update transform panel
     if(n->getNodeType() == NODE_TRANSFORM) {
         TransformNode *t = static_cast<TransformNode*>(n);
 
@@ -84,9 +93,18 @@ void readLiveVars(SGNode *n) {
             rotation[i] = t->rotation[i];
         }
         panel_transform->enable();
-    } else {
-        panel_transform->disable();
     }
+    // If node is an Object node, show proper panels
+    else if(n->getNodeType() == NODE_OBJECT) {
+        ObjectNode *o = static_cast<ObjectNode*>(n);
+        if(o->geom != NULL) {
+            panel_geom->enable();
+        }
+        if(o->attr != NULL) {
+            panel_attr->enable();
+        }
+    }
+    // If node has children, update child list
     if(n->getNodeType() == NODE_TRANSFORM || n->getNodeType() == NODE_OBJECT) {
         ParentNode *p = static_cast<ParentNode*>(n);
 
@@ -148,7 +166,7 @@ void traverse_cb(int id) {
 void crud_cb(int id) {
     switch(id) {
         case ID_ADD_CHILD:
-            sg->addChild(nodeType);
+            sg->addChild(lv_createNodeType);
             break;
         case ID_DELETE_CHILD:
             sg->deleteChild(childIdx);
@@ -158,11 +176,27 @@ void crud_cb(int id) {
 }
 
 void node_cb(int id) {
-
+    switch(id) {
+        case NODE_GEOM:
+            ObjectNode *o = static_cast<ObjectNode*>(sg->getCurrent());
+            o->geom->loadModel(std::string(filename));
+            break;
+    }
 }
 
 void object_cb(int id) {
-
+    ObjectNode *o = static_cast<ObjectNode*>(sg->getCurrent());
+    switch(id) {
+        case 0:
+            delete o->geom;
+            o->geom = NULL;
+            break;
+        case 1:
+            delete o->attr;
+            o->attr = NULL;
+            break;
+    }
+    readLiveVars(sg->getCurrent());
 }
 
 int main(int argc, char *argv[]) {
@@ -226,7 +260,7 @@ int main(int argc, char *argv[]) {
 
     GLUI_Panel *addOptions = new GLUI_Panel( sgOptions, "" );
 
-    GLUI_Listbox *nodeTypeList = new GLUI_Listbox( addOptions, "Type: ", &nodeType );
+    GLUI_Listbox *nodeTypeList = new GLUI_Listbox( addOptions, "Type: ", &lv_createNodeType );
     nodeTypeList->add_item(NODE_OBJECT,    "Object");
     nodeTypeList->add_item(NODE_TRANSFORM, "Transform");
     nodeTypeList->add_item(NODE_GEOM,      "Geometry");
@@ -242,23 +276,17 @@ int main(int argc, char *argv[]) {
     /* Node Options Panels ***************************************************/
     /*************************************************************************/
 
-    panel_object = new GLUI_Panel( sgOptions, "Object Node" );
     panel_geom   = new GLUI_Panel( sgOptions, "Geometry Node" );
     panel_attr   = new GLUI_Panel( sgOptions, "Attribute Node" );
-
-    // Object node options
-    new GLUI_Button( panel_object, "Add Geometry",   NODE_GEOM, object_cb );
-    new GLUI_Column( panel_object, false );
-    new GLUI_Button( panel_object, "Add Attributes", NODE_ATTR, object_cb );
 
     // Geometry node options
     glui->add_edittext_to_panel( panel_geom, "Path: ", GLUI_EDITTEXT_TEXT, &filename );
     new GLUI_Column( panel_geom, false );
-    new GLUI_Button( panel_geom, "Load File",   NODE_GEOM, node_cb );
-    new GLUI_Button( panel_geom, "Delete Node", NODE_GEOM, crud_cb );
+    new GLUI_Button( panel_geom, "Load File", NODE_GEOM, node_cb );
+    new GLUI_Button( panel_geom, "Delete Node", 0, object_cb );
 
     // Attribute node options
-    GLUI_Listbox *attr_list = new GLUI_Listbox(panel_attr, "Render Mode: ", &renderMode);
+    GLUI_Listbox *attr_list = new GLUI_Listbox(panel_attr, "Render Mode: ", &attr_renderMode);
     attr_list->add_item(MODE_LIT, "Lit");
     attr_list->add_item(MODE_SOLID, "Solid");
     attr_list->add_item(MODE_WIRE, "Wireframe");
@@ -267,11 +295,10 @@ int main(int argc, char *argv[]) {
     new GLUI_StaticText( panel_attr, "" );
     
     // Checkboxes to toggle normals
-    new GLUI_Checkbox( panel_attr, "Draw Face Normals", &showFaceNormals );
-    new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &showVertNormals );
-
+    new GLUI_Checkbox( panel_attr, "Draw Face Normals", &attr_showFaceNormals );
+    new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &attr_showVertNormals );
     new GLUI_StaticText( panel_attr, "" );
-    new GLUI_Button( panel_attr, "Delete Node", NODE_ATTR, crud_cb );
+    new GLUI_Button( panel_attr, "Delete Node", 1, object_cb );
 
     /*************************************************************************/
     /* Transform Node Panel **************************************************/
