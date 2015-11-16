@@ -63,10 +63,8 @@ void display() {
     glLoadIdentity();
     gluPerspective(45.0, 1, 0.1, 200);
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(0, 0, 1, 0, 0, 0, 0, 1, 0);
-
+    // Camera projection happens here
+    
     sg->display();
 
     glFlush();

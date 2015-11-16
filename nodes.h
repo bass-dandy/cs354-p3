@@ -192,12 +192,21 @@ class ObjectNode : public ParentNode {
 
 class LightNode : public SGNode {
 
+    private:
+    
+        const float pos[4] = {0, 0, 0, 1};
+
     public:
 
         LightNode() : SGNode("Light") {}
 
         int getNodeType() {
             return NODE_LIGHT;
+        }
+
+        void draw() {
+            glLightfv( GL_LIGHT1, GL_POSITION, pos);
+            glEnable( GL_LIGHT1 );
         }
 };
 
@@ -209,6 +218,12 @@ class CameraNode : public SGNode {
 
         int getNodeType() {
             return NODE_CAMERA;
+        }
+
+        void draw() {
+            glMatrixMode(GL_MODELVIEW);
+            glLoadIdentity();
+            parent->draw();
         }
 };
 

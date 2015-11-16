@@ -7,8 +7,9 @@ class SceneGraph {
     
     private:
 
-        SGNode *root;
-        SGNode *current;
+        ParentNode *root;
+        SGNode     *current;
+        CameraNode *camera;
 
         void draw(SGNode *n) {
             glMatrixMode(GL_MODELVIEW);
@@ -33,6 +34,11 @@ class SceneGraph {
 
             TransformNode *t = new TransformNode();
             static_cast<ParentNode*>(root)->addChild(t);
+            
+            CameraNode *c = new CameraNode();
+            t->addChild(c);
+            t->translation.z = 1;
+            camera = c;
         }
 
         SGNode *getCurrent() {
@@ -96,7 +102,8 @@ class SceneGraph {
                         }
                         break;
                     case NODE_LIGHT:
-                        // TODO
+                        n = new LightNode();
+                        static_cast<ParentNode*>(current)->addChild(n);
                         break;
                 }
             } else {
@@ -112,7 +119,10 @@ class SceneGraph {
         }
 
         void display() {
-            draw(root);
+            camera->draw();
+            for(int i = 1; i < root->children.size(); ++i) {
+                draw(root->children[i]);
+            }
         }
 };
 
