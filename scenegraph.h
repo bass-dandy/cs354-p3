@@ -32,13 +32,16 @@ class SceneGraph {
             root = new ObjectNode("Root");
             current = root;
 
-            TransformNode *t = new TransformNode();
+            TransformNode *t = new TransformNode("Cam Transform");
             static_cast<ParentNode*>(root)->addChild(t);
             
             CameraNode *c = new CameraNode();
             t->addChild(c);
-            t->translation.z = 1;
+            t->translation.z = -1;
             camera = c;
+
+            t = new TransformNode();
+            static_cast<ParentNode*>(root)->addChild(t);
         }
 
         SGNode *getCurrent() {

@@ -22,7 +22,7 @@ SceneGraph *sg;
 // GLUI components
 int main_window;
 GLUI *glui, *panel_transform;
-GLUI_Panel *panel_geom, *panel_attr;
+GLUI_Panel *panel_geom, *panel_attr, *panel_camera;
 GLUI_Listbox *childList;
 GLUI_StaticText *selectedNodeName;
 
@@ -35,6 +35,10 @@ int showVertNormals = 0;
 int attr_renderMode = MODE_LIT;
 int attr_showFaceNormals = 0;
 int attr_showVertNormals = 0;
+
+float fv_zNear;
+float fv_zFar;
+float fv_fov;
 
 int childIdx;
 int childCnt;
@@ -57,21 +61,13 @@ void idle() {
 }
 
 void display() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(45.0, 1, 0.1, 200);
-
-    // Camera projection happens here
-    
     sg->display();
-
     glFlush();
 }
 
 void readLiveVars(SGNode *n) {
     panel_transform->disable();
+    panel_camera->disable();
     panel_geom->disable();
     panel_attr->disable();
 
@@ -104,6 +100,13 @@ void readLiveVars(SGNode *n) {
             attr_showVertNormals = o->attr->drawVertNormals;
             attr_renderMode = o->attr->renderMode;
         }
+    }
+    else if(n->getNodeType() == NODE_CAMERA) {
+        panel_camera->enable();
+        CameraNode *c = static_cast<CameraNode*>(n);
+        fv_zNear = c->zNear;
+        fv_zFar  = c->zFar;
+        fv_fov   = c->fov;
     }
     // If node has children, update child list
     if(n->getNodeType() == NODE_TRANSFORM || n->getNodeType() == NODE_OBJECT) {
@@ -177,15 +180,24 @@ void crud_cb(int id) {
 }
 
 void node_cb(int id) {
-    ObjectNode *o = static_cast<ObjectNode*>(sg->getCurrent());
+    ObjectNode *o;
+    CameraNode *c;
     switch(id) {
         case NODE_GEOM:
+            o = static_cast<ObjectNode*>(sg->getCurrent());
             o->geom->loadModel(std::string(filename));
             break;
         case NODE_ATTR:
+            o = static_cast<ObjectNode*>(sg->getCurrent());
             o->attr->renderMode = attr_renderMode;
             o->attr->drawFaceNormals = attr_showFaceNormals;
             o->attr->drawVertNormals = attr_showVertNormals;
+            break;
+        case NODE_CAMERA:
+            c = static_cast<CameraNode*>(sg->getCurrent());
+            c->zNear = fv_zNear;
+            c->zFar  = fv_zFar;
+            c->fov   = fv_fov;
             break;
     }
 }
@@ -225,34 +237,16 @@ int main(int argc, char *argv[]) {
     glui->set_main_gfx_window( main_window );
 
     /*************************************************************************/
-    /* Render Options Panel **************************************************/
-    /*************************************************************************/
-    
-    GLUI_Panel *renderOptions = new GLUI_Panel( glui, "Render Options" );
-    
-    // Render mode dropdown menu
-    GLUI_Listbox *list = new GLUI_Listbox(renderOptions, "Render Mode: ", &renderMode);
-    list->add_item(MODE_LIT, "Lit");
-    list->add_item(MODE_SOLID, "Solid");
-    list->add_item(MODE_WIRE, "Wireframe");
-    list->add_item(MODE_POINT, "Point");
-  
-    new GLUI_StaticText( renderOptions, "" );
-    
-    // Checkboxes to toggle normals
-    new GLUI_Checkbox( renderOptions, "Draw Face Normals", &showFaceNormals );
-    new GLUI_Checkbox( renderOptions, "Draw Vertex Normals", &showVertNormals );
- 
-    /*************************************************************************/
     /* SG Options Panel ******************************************************/
     /*************************************************************************/
 
-    GLUI_Panel *sgOptions = new GLUI_Panel( glui, "Selected Node" );
-    selectedNodeName = new GLUI_StaticText(sgOptions, "Name: ");
-    
-    new GLUI_Button( sgOptions, "Select Parent", ID_SELECT_PARENT, traverse_cb );
+    GLUI_Panel *panel_current = new GLUI_Panel( glui, "Selected Node" );
 
-    GLUI_Panel *childOptions = new GLUI_Panel( sgOptions, "Children" );
+    selectedNodeName = new GLUI_StaticText(panel_current, "Name: ");
+    new GLUI_Column( panel_current, false );
+    new GLUI_Button( panel_current, "Select Parent", ID_SELECT_PARENT, traverse_cb );
+
+    GLUI_Panel *childOptions = new GLUI_Panel( glui, "Children" );
 
     childList = new GLUI_Listbox(childOptions, "Child: ", &childIdx);
 
@@ -264,7 +258,7 @@ int main(int argc, char *argv[]) {
     /* Node Addition Panel ***************************************************/
     /*************************************************************************/
 
-    GLUI_Panel *addOptions = new GLUI_Panel( sgOptions, "" );
+    GLUI_Panel *addOptions = new GLUI_Panel( glui, "" );
 
     GLUI_Listbox *nodeTypeList = new GLUI_Listbox( addOptions, "Type: ", &lv_createNodeType );
     nodeTypeList->add_item(NODE_OBJECT,    "Object");
@@ -276,14 +270,15 @@ int main(int argc, char *argv[]) {
     new GLUI_Column( addOptions, false );
     new GLUI_Button( addOptions, "Add Child", ID_ADD_CHILD, crud_cb );
 
-    new GLUI_StaticText( sgOptions, "" );
+    new GLUI_StaticText( glui, "" );
 
     /*************************************************************************/
     /* Node Options Panels ***************************************************/
     /*************************************************************************/
 
-    panel_geom   = new GLUI_Panel( sgOptions, "Geometry Node" );
-    panel_attr   = new GLUI_Panel( sgOptions, "Attribute Node" );
+    panel_geom   = new GLUI_Panel( glui, "Geometry Node" );
+    panel_attr   = new GLUI_Panel( glui, "Attribute Node" );
+    panel_camera = new GLUI_Panel( glui, "Camera Node" );
 
     // Geometry node options
     glui->add_edittext_to_panel( panel_geom, "Path: ", GLUI_EDITTEXT_TEXT, &filename );
@@ -305,6 +300,11 @@ int main(int argc, char *argv[]) {
     new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &attr_showVertNormals, NODE_ATTR, node_cb );
     new GLUI_StaticText( panel_attr, "" );
     new GLUI_Button( panel_attr, "Delete Node", 1, object_cb );
+
+    // Camera node options
+    new GLUI_Spinner(panel_camera, "Near Clip: ", &fv_zNear, NODE_CAMERA, node_cb);
+    new GLUI_Spinner(panel_camera, "Far Clip: ",  &fv_zFar,  NODE_CAMERA, node_cb);
+    new GLUI_Spinner(panel_camera, "FOV: ",       &fv_fov,   NODE_CAMERA, node_cb);
 
     /*************************************************************************/
     /* Transform Node Panel **************************************************/

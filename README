@@ -1,22 +1,74 @@
-In addition to the commands listed on the project spec, two additional 
-commands have been added:
+Christian Dinh
+eid: ctd487
 
-M <arg>
-    changes the viewing mode
-    arg can be any of: point wire solid lit
-    ex: M point
+Tested + working on Skipper.
 
-N <arg>
-    toggles normal visibility for arg-type normals
-    arg can be either of: face vertex
-    ex: N face
+Things that were not implemented:
+    - Light Nodes
+    - Camera controls (camera node can only be moved by moving its transform 
+      node)
+    - Motions
+    - Global rendering mode (point, wire, normals, etc)
 
-To input commands, focus on the glut window and press the 'c' key
-Commands can then be entered into the terminal used to launch the program
+I tried to make the UI as intuitive as possible, but here's a brief rundown 
+in case I failed:
 
-Note that the orbit camera suffers from gimbal lock, so moving it to extreme 
-y values will result in buggy behavior.
+== The right subwindow ========================================================
 
-Also note that there is next to no error checking or input sanitation.
-If the program is used properly (ie arg counts and types are correct for each
-command) then there should be no problem.
+__Selected Node Panel________________
+
+This panel shows the name of the currently selected node, as well as a button
+which changes the current selected node to the current node's parent (if its
+parent exists)
+
+
+__Children Panel_____________________
+
+The dropdown box shows the names of all the children of the current node.
+Note that only transform and object nodes can have children.
+Clicking the "Select Child" button changes the currently selected node to
+the node selected in the dropdown box. Clicking the "Delete Child"
+button deletes the node selected in the dropdown box.
+
+There is an unnamed panel below this (consider it a subpanel of the children
+panel) that allows you to add a child node to the currently selected node
+if it is allowed to have children. The dropdown box on the left selects the
+type of node to add as a child of the current node.
+
+
+__Geometry Node Panel________________
+
+This panel is deactivated unless the currently selected node is an object
+node AND that object node has a geometry node child.
+
+The text box can be used to enter a file path of a .obj file, which can then
+be loaded using the "Load File" button. The geometry node child can be deleted
+using the "Delete Node" button.
+
+
+__Attribute Node Panel_______________
+
+This panel is deactivated unless the currently selected node is an object
+node AND that object node has an attribute node child.
+
+The dropdown menu selects the render mode of the parent object node. The
+checkboxes are self explanatory. None of these options have any effect unless
+the parent object node also has a geometry node child with a loaded .obj file.
+
+
+__Camera Node Panel__________________
+
+This panel is deactivated unless the currently selected node is a camera node.
+
+The spinner options should be self-explanatory and all affect the perspective
+matrix.
+
+
+== Bottom Subwindow ===========================================================
+
+This subwindow is deactivated unless the currently selected node is a transform
+node.
+
+Click and drag the rotate and translate widgets to move the transform node.
+Scaling can likewise be set by using the spinners to the right. Clicking
+the "Reset" button resets the current transform.

@@ -205,8 +205,8 @@ class LightNode : public SGNode {
         }
 
         void draw() {
-            glLightfv( GL_LIGHT1, GL_POSITION, pos);
-            glEnable( GL_LIGHT1 );
+            glLightfv( GL_LIGHT2, GL_POSITION, pos);
+            glEnable( GL_LIGHT2 );
         }
 };
 
@@ -214,16 +214,30 @@ class CameraNode : public SGNode {
 
     public:
 
-        CameraNode() : SGNode("Camera") {}
+        float zNear;
+        float zFar;
+        float fov;
+
+        CameraNode() : SGNode("Camera"), zNear(0.1), zFar(200), fov(45.0) {}
 
         int getNodeType() {
             return NODE_CAMERA;
         }
 
         void draw() {
+            Point translation = static_cast<TransformNode*>(parent)->translation;
+            float *rotation   = static_cast<TransformNode*>(parent)->rotation;
+    
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            glMatrixMode(GL_PROJECTION);
+            glLoadIdentity();
+            gluPerspective(fov, 1, zNear, zFar);
+
             glMatrixMode(GL_MODELVIEW);
             glLoadIdentity();
-            parent->draw();
+            glMultMatrixf(rotation);
+            glTranslatef(translation.x, translation.y, translation.z);
         }
 };
 
