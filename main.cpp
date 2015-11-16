@@ -102,6 +102,9 @@ void readLiveVars(SGNode *n) {
         }
         if(o->attr != NULL) {
             panel_attr->enable();
+            attr_showFaceNormals = o->attr->drawFaceNormals;
+            attr_showVertNormals = o->attr->drawVertNormals;
+            attr_renderMode = o->attr->renderMode;
         }
     }
     // If node has children, update child list
@@ -176,10 +179,15 @@ void crud_cb(int id) {
 }
 
 void node_cb(int id) {
+    ObjectNode *o = static_cast<ObjectNode*>(sg->getCurrent());
     switch(id) {
         case NODE_GEOM:
-            ObjectNode *o = static_cast<ObjectNode*>(sg->getCurrent());
             o->geom->loadModel(std::string(filename));
+            break;
+        case NODE_ATTR:
+            o->attr->renderMode = attr_renderMode;
+            o->attr->drawFaceNormals = attr_showFaceNormals;
+            o->attr->drawVertNormals = attr_showVertNormals;
             break;
     }
 }
@@ -286,7 +294,7 @@ int main(int argc, char *argv[]) {
     new GLUI_Button( panel_geom, "Delete Node", 0, object_cb );
 
     // Attribute node options
-    GLUI_Listbox *attr_list = new GLUI_Listbox(panel_attr, "Render Mode: ", &attr_renderMode);
+    GLUI_Listbox *attr_list = new GLUI_Listbox(panel_attr, "Render Mode: ", &attr_renderMode, NODE_ATTR, node_cb);
     attr_list->add_item(MODE_LIT, "Lit");
     attr_list->add_item(MODE_SOLID, "Solid");
     attr_list->add_item(MODE_WIRE, "Wireframe");
@@ -295,8 +303,8 @@ int main(int argc, char *argv[]) {
     new GLUI_StaticText( panel_attr, "" );
     
     // Checkboxes to toggle normals
-    new GLUI_Checkbox( panel_attr, "Draw Face Normals", &attr_showFaceNormals );
-    new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &attr_showVertNormals );
+    new GLUI_Checkbox( panel_attr, "Draw Face Normals",   &attr_showFaceNormals, NODE_ATTR, node_cb );
+    new GLUI_Checkbox( panel_attr, "Draw Vertex Normals", &attr_showVertNormals, NODE_ATTR, node_cb );
     new GLUI_StaticText( panel_attr, "" );
     new GLUI_Button( panel_attr, "Delete Node", 1, object_cb );
 

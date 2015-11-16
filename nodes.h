@@ -23,7 +23,7 @@ class SGNode {
     protected:
         
         std::string name;
-        SGNode *parent;
+        SGNode *parent = NULL;
 
         SGNode(std::string name) : name(name) {}
     
@@ -124,7 +124,7 @@ class GeometryNode : public SGNode {
 
     private:
 
-        Trimesh *model;
+        Trimesh *model = NULL;
 
     public:
 
